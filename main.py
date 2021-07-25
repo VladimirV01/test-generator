@@ -9,6 +9,44 @@ import main_window
 
 import test_dlg
 import question_parser
+import results
+
+
+class ResultWindow(QDialog, results.Ui_Dialog):
+    def __init__(self):
+        super(ResultWindow, self).__init__()
+        self.setupUi(self)
+
+        self.choice = 'Cancel'
+        self.ok_btn.clicked.connect(self.ok_clicked)
+        self.cancel_btn.clicked.connect(self.cancel_clicked)
+
+    def ok_clicked(self):
+        self.choice = 'Ok'
+        self.close()
+
+    def cancel_clicked(self):
+        self.close()
+
+    def print_information(self, statistics):
+        self.right_questions_nr.setStyleSheet('color:green')
+        self.right_questions_nr.setText(str(statistics['right']))
+        self.wrong_questions_nr.setStyleSheet('color:red')
+        self.wrong_questions_nr.setText(str(statistics['wrong']))
+
+        if statistics['accuracy'] > 0.5:
+            color = f'green'
+        else:
+            color = f'red'
+        self.accuracy.setStyleSheet(f'color:{color}')
+        self.accuracy.setText(f'{str(statistics["accuracy"] * 100)}%')
+
+        self.elapsed_time.setText(f'Rezolvarea testului a durat {str(statistics["time"]).split(".")[0]}')
+
+    def show_result_window(self, statistics):
+        self.print_information(statistics)
+        self.exec_()
+        return self.choice
 
 
 class ExtendedQLabel(QLabel):
@@ -47,14 +85,17 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
         self.stop_btn.clicked.connect(self.stop)
 
     def stop(self):
-        message_window = QMessageBox()
-        message_window.setIcon(QMessageBox.Warning)
-        message_window.setWindowTitle('Atentie')
-        message_window.setText('Nu ati rezolvat testul pana la sfarsit. '
-                               'Daca inchideti, progresul testului actual va fi pierdut')
-        message_window.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        choice = message_window.exec_()
-        if choice == QMessageBox.Ok:
+        if not self.finished:
+            message_window = QMessageBox()
+            message_window.setIcon(QMessageBox.Warning)
+            message_window.setWindowTitle('Atentie')
+            message_window.setText('Nu ati rezolvat testul pana la sfarsit. '
+                                   'Daca inchideti, progresul testului actual va fi pierdut')
+            message_window.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            choice = message_window.exec_()
+            if choice == QMessageBox.Ok:
+                self.close()
+        else:
             self.close()
 
     def populate_navbar(self):
@@ -71,7 +112,7 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
             vbox.addWidget(label, stretch=1)
 
     def determine_clicked_label(self, value):
-        if value in self.skipped_questions:
+        if value - 1 in self.skipped_questions:
             self.reload_skipped_question(value)
 
     def reload_skipped_question(self, value):
@@ -105,24 +146,37 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
                 self.finished = True
             return False
 
+    # def check_if_done2(self):
+    #     if self.finished and len(self.skipped_questions) == 0:
+    #         result = ResultWindow()
+    #         print(result.show_result_window('tra'))
+    #         # Calculate accuracy:
+    #         self.statistics['accuracy'] = float((self.statistics['right'] /
+    #                                             (self.statistics['right'] + self.statistics['wrong'])))
+    #         self.statistics['time'] = datetime.now() - self.start_time
+    #         message_window = QMessageBox()
+    #         message_window.setIcon(QMessageBox.Information)
+    #         message_window.setWindowTitle('Felicitari')
+    #         message_window.setText(f'\tAti rezolvat acest test.\n'
+    #                                f'Ati acumulat {self.statistics["right"]} raspunsuri corect si '
+    #                                f'{self.statistics["wrong"]} raspunsuri gresite. \nInsusire intrebarilor'
+    #                                f' este de {self.statistics["accuracy"]*100}%.\n'
+    #                                f'Rezolvarea testului a durat {str(self.statistics["time"])}.')
+    #         message_window.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+    #         choice = message_window.exec_()
+    #         if choice == QMessageBox.Ok:
+    #             self.close()
+
     def check_if_done(self):
         if self.finished and len(self.skipped_questions) == 0:
 
-            # Calculate accuracy:
             self.statistics['accuracy'] = float((self.statistics['right'] /
-                                                (self.statistics['right'] + self.statistics['wrong'])))
+                                                 (self.statistics['right'] + self.statistics['wrong'])))
             self.statistics['time'] = datetime.now() - self.start_time
-            message_window = QMessageBox()
-            message_window.setIcon(QMessageBox.Information)
-            message_window.setWindowTitle('Felicitari')
-            message_window.setText(f'\tAti rezolvat acest test.\n'
-                                   f'Ati acumulat {self.statistics["right"]} raspunsuri corect si '
-                                   f'{self.statistics["wrong"]} raspunsuri gresite. \nInsusire intrebarilor'
-                                   f' este de {self.statistics["accuracy"]*100}%.\n'
-                                   f'Rezolvarea testului a durat {str(self.statistics["time"])}.')
-            message_window.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            choice = message_window.exec_()
-            if choice == QMessageBox.Ok:
+
+            result_window = ResultWindow()
+            choice = result_window.show_result_window(self.statistics)
+            if choice == 'Ok':
                 self.close()
 
     def next(self):
