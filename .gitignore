@@ -134,3 +134,4 @@ dmypy.json
 # My files with tests
 Domeniul*
 Answers*
+config.*
