@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>690</width>
-    <height>794</height>
+    <width>710</width>
+    <height>778</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -153,7 +153,7 @@
         <item>
          <widget class="QGroupBox" name="groupBox_3">
           <property name="title">
-           <string>Rezultatele ultimului test rezolvat</string>
+           <string>Rezultatele ultimului test</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -175,6 +175,26 @@
                </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
+               </property>
+               <property name="dateTime">
+                <datetime>
+                 <hour>12</hour>
+                 <minute>0</minute>
+                 <second>0</second>
+                 <year>2000</year>
+                 <month>1</month>
+                 <day>1</day>
+                </datetime>
+               </property>
+               <property name="time">
+                <time>
+                 <hour>12</hour>
+                 <minute>0</minute>
+                 <second>0</second>
+                </time>
+               </property>
+               <property name="displayFormat">
+                <string>MM/dd/yyyy hh:mm</string>
                </property>
               </widget>
              </item>
@@ -255,7 +275,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>690</width>
+     <width>710</width>
      <height>26</height>
     </rect>
    </property>

@@ -128,7 +128,7 @@ class Statistics:
             return f'This test of {self.nr_questions} questions was taken {self.datetime}.\n' \
                    f'The selected domains were {*self.selected_domains,}.\n' \
                    f'There were accumulated {self.right_answers} right answers and {self.wrong_answers} ' \
-                   f'wrong answers.\nThe accuracy was {self.accuracy}.\n'\
+                   f'wrong answers.\nThe accuracy was {self.accuracy * 100}%.\n'\
                    f'The test was completed in {self.elapsed_time}.'
 
         def get_right_answers(self):
@@ -165,13 +165,6 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
         self.labels = []
         self.skipped_questions = []
         self.finished = False
-
-        self.statistics = {
-            'right': 0,
-            'wrong': 0,
-            'accuracy': 0.0,
-            'time': 0
-        }
 
         self.skip_btn.clicked.connect(self.skip)
         self.next_btn.clicked.connect(self.next)
@@ -263,7 +256,6 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
                 self.record.increment_right_answers()
             else:
                 self.labels[self.question_index].setStyleSheet('background-color : red')
-                # self.statistics['wrong'] += 1
 
             if self.question_index in self.skipped_questions:
                 self.skipped_questions.remove(self.question_index)
@@ -402,7 +394,7 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
         window = TestDialog()
         record = window.run_test(questions, self.statistics.Record())
         record.set_selected_domains([name.get_domain_name_nr() for name in self.check_selected_domains()])
-        print(record)
+
         self.statistics.add_record_object(record)
         self.load_last_test_statistics()
         # TODO: Implement the inspector window.
