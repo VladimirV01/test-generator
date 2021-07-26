@@ -1,9 +1,10 @@
+import pickle
 import random
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QLabel, QVBoxLayout, QHBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QLabel, QHBoxLayout, QMessageBox
 
 import main_window
 
@@ -28,23 +29,23 @@ class ResultWindow(QDialog, results.Ui_Dialog):
     def cancel_clicked(self):
         self.close()
 
-    def print_information(self, statistics):
+    def print_information(self, record):
         self.right_questions_nr.setStyleSheet('color:green')
-        self.right_questions_nr.setText(str(statistics['right']))
+        self.right_questions_nr.setText(str(record.get_right_answers()))
         self.wrong_questions_nr.setStyleSheet('color:red')
-        self.wrong_questions_nr.setText(str(statistics['wrong']))
+        self.wrong_questions_nr.setText(str(record.get_wrong_answers()))
 
-        if statistics['accuracy'] > 0.5:
+        if record.get_accuracy() > 0.5:
             color = f'green'
         else:
             color = f'red'
         self.accuracy.setStyleSheet(f'color:{color}')
-        self.accuracy.setText(f'{str(statistics["accuracy"] * 100)}%')
+        self.accuracy.setText(f'{str(record.get_accuracy() * 100)}%')
 
-        self.elapsed_time.setText(f'Rezolvarea testului a durat {str(statistics["time"]).split(".")[0]}')
+        self.elapsed_time.setText(f'Rezolvarea testului a durat {str(record.get_elapsed_time()).split(".")[0]}')
 
-    def show_result_window(self, statistics):
-        self.print_information(statistics)
+    def show_result_window(self, record):
+        self.print_information(record)
         self.exec_()
         return self.choice
 
@@ -58,6 +59,98 @@ class ExtendedQLabel(QLabel):
     def mousePressEvent(self, ev):
         if ev.button() == Qt.LeftButton:
             self.clicked.emit(int(self.text()))
+
+
+class Statistics:
+    def __init__(self):
+        self.records = []
+        self.added_new_record = False
+
+    def add_record(self, right_answers=0, start_time=0, nr_questions=0):
+        self.records.append(self.Record(right_answers, start_time, nr_questions))
+        self.added_new_record = True
+
+    def add_record_object(self, record_object):
+        self.records.append(record_object)
+        self.added_new_record = True
+
+    def get_last_record(self):
+        try:
+            return self.records[len(self.records) - 1]
+        except IndexError:
+            print(f'No records.')
+
+    def get_records(self):
+        return self.records
+
+    def delete_records(self):
+        self.records = []
+
+    def exist_new_records(self):
+        return self.added_new_record
+
+    class Record:
+        def __init__(self, right_answers=0, start_time=0, nr_questions=0):
+            self.right_answers = right_answers
+            self.datetime = start_time
+            self.nr_questions = nr_questions
+            self.wrong_answers = 0
+            self.accuracy = 0.0
+            self.elapsed_time = 0
+            self.selected_domains = []
+            if self.right_answers and self.datetime and self.nr_questions:
+                self.finished_record()
+
+        def set_selected_domains(self, domains):
+            self.selected_domains = domains
+
+        def set_right_answers(self, right_answers=0):
+            self.right_answers = right_answers
+
+        def increment_right_answers(self):
+            self.right_answers += 1
+
+        def set_start_time(self):
+            self.datetime = datetime.now()
+
+        def set_nr_questions(self, nr_questions):
+            self.nr_questions = nr_questions
+
+        def finished_record(self):
+            self.wrong_answers = self.nr_questions - self.right_answers
+            self.accuracy = round(float(self.right_answers / self.nr_questions), 2)
+            self.elapsed_time = datetime.now() - self.datetime
+
+        def print_record(self):
+            print(self.get_record_info())
+
+        def get_record_info(self):
+            return f'This test of {self.nr_questions} questions was taken {self.datetime}.\n' \
+                   f'The selected domains were {*self.selected_domains,}.\n' \
+                   f'There were accumulated {self.right_answers} right answers and {self.wrong_answers} ' \
+                   f'wrong answers.\nThe accuracy was {self.accuracy}.\n'\
+                   f'The test was completed in {self.elapsed_time}.'
+
+        def get_right_answers(self):
+            return self.right_answers
+
+        def get_wrong_answers(self):
+            return self.nr_questions - self.right_answers
+
+        def get_accuracy(self):
+            return self.accuracy
+
+        def get_nr_questions(self):
+            return self.nr_questions
+
+        def get_elapsed_time(self):
+            return self.elapsed_time
+
+        def get_datetime(self):
+            return self.datetime
+
+        def __repr__(self):
+            return self.get_record_info()
 
 
 class TestDialog(QDialog, test_dlg.Ui_Dialog):
@@ -146,36 +239,11 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
                 self.finished = True
             return False
 
-    # def check_if_done2(self):
-    #     if self.finished and len(self.skipped_questions) == 0:
-    #         result = ResultWindow()
-    #         print(result.show_result_window('tra'))
-    #         # Calculate accuracy:
-    #         self.statistics['accuracy'] = float((self.statistics['right'] /
-    #                                             (self.statistics['right'] + self.statistics['wrong'])))
-    #         self.statistics['time'] = datetime.now() - self.start_time
-    #         message_window = QMessageBox()
-    #         message_window.setIcon(QMessageBox.Information)
-    #         message_window.setWindowTitle('Felicitari')
-    #         message_window.setText(f'\tAti rezolvat acest test.\n'
-    #                                f'Ati acumulat {self.statistics["right"]} raspunsuri corect si '
-    #                                f'{self.statistics["wrong"]} raspunsuri gresite. \nInsusire intrebarilor'
-    #                                f' este de {self.statistics["accuracy"]*100}%.\n'
-    #                                f'Rezolvarea testului a durat {str(self.statistics["time"])}.')
-    #         message_window.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-    #         choice = message_window.exec_()
-    #         if choice == QMessageBox.Ok:
-    #             self.close()
-
     def check_if_done(self):
         if self.finished and len(self.skipped_questions) == 0:
-
-            self.statistics['accuracy'] = float((self.statistics['right'] /
-                                                 (self.statistics['right'] + self.statistics['wrong'])))
-            self.statistics['time'] = datetime.now() - self.start_time
-
+            self.record.finished_record()
             result_window = ResultWindow()
-            choice = result_window.show_result_window(self.statistics)
+            choice = result_window.show_result_window(self.record)
             if choice == 'Ok':
                 self.close()
 
@@ -183,19 +251,19 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
         if self.var_a.isChecked() or self.var_b.isChecked() or self.var_c.isChecked() or self.var_d.isChecked():
             if self.var_a.isChecked() and self.questions[self.question_index].get_answer() == 'a':
                 self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.statistics['right'] += 1
+                self.record.increment_right_answers()
             elif self.var_b.isChecked() and self.questions[self.question_index].get_answer() == 'b':
                 self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.statistics['right'] += 1
+                self.record.increment_right_answers()
             elif self.var_c.isChecked() and self.questions[self.question_index].get_answer() == 'c':
                 self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.statistics['right'] += 1
+                self.record.increment_right_answers()
             elif self.var_d.isChecked() and self.questions[self.question_index].get_answer() == 'c':
                 self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.statistics['right'] += 1
+                self.record.increment_right_answers()
             else:
                 self.labels[self.question_index].setStyleSheet('background-color : red')
-                self.statistics['wrong'] += 1
+                # self.statistics['wrong'] += 1
 
             if self.question_index in self.skipped_questions:
                 self.skipped_questions.remove(self.question_index)
@@ -236,13 +304,17 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
         self.var_c_text.insertPlainText(variants[2])
         self.var_d_text.insertPlainText(variants[3])
 
-    def run_test(self, questions):
-        self.start_time = datetime.now()
+    def run_test(self, questions, record):
+        self.record = record
+        self.record.set_start_time()
+        self.record.set_nr_questions(len(questions))
+        self.record.set_right_answers()
+
         self.questions = questions
         self.populate_navbar()
         self.load_one()
         self.exec_()
-        return self.statistics
+        return self.record
 
 
 class Root(QMainWindow, main_window.Ui_MainWindow):
@@ -252,8 +324,14 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
 
         # Get the question from file.
         parser = question_parser.Parser()
-        # Set up a statistics variable.
-        self.statistics = {}
+        # Set up a statistics variable. Try to read it from file first.
+        try:
+            with open('config.statistics', 'rb') as config_stats_file:
+                self.statistics = pickle.load(config_stats_file)
+                self.load_last_test_statistics()
+        except FileNotFoundError:
+            self.statistics = Statistics()
+
         self.domenii = []
         for i in range(4):
             parser.set_path(f'Domeniul_{i + 1}.txt', f'Answers_{i+1}.txt')
@@ -266,13 +344,28 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
 
         self.generate.clicked.connect(self.show_test_window)
 
+    def load_last_test_statistics(self):
+        record = self.statistics.get_last_record()
+        self.last_test_datetime.setDateTime(record.get_datetime())
+        if record.get_accuracy() < 0.5:
+            color = 'red'
+        else:
+            color = 'green'
+        self.last_test_accuracy.setStyleSheet(f'color:{color}; font-size:20px')
+        self.last_test_accuracy.setText(f'{str(record.get_accuracy() * 100)}%')
+        self.last_test_right_answers.setStyleSheet('color:green; font-size:20px')
+        self.last_test_right_answers.setText(str(record.get_right_answers()))
+        self.last_test_wrong_answers.setStyleSheet('color:red; font-size:20px')
+        self.last_test_wrong_answers.setText(str(record.get_wrong_answers()))
+        self.last_test_duration.setText(str(record.get_elapsed_time()).split('.')[0])
+
     def check_selected_domains(self):
         dom_choices = []
         if self.dom_I.isChecked():
             dom_choices.append(self.domenii[0])
         if self.dom_II.isChecked():
             dom_choices.append(self.domenii[1])
-        if self.dom_II.isChecked():
+        if self.dom_III.isChecked():
             dom_choices.append(self.domenii[2])
         if self.dom_IV.isChecked():
             dom_choices.append(self.domenii[3])
@@ -307,11 +400,22 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
         questions = self.get_questions(self.get_questions_number())
 
         window = TestDialog()
-        self.statistics = window.run_test(questions)
-        # TODO: Show last test results in the main window.
+        record = window.run_test(questions, self.statistics.Record())
+        record.set_selected_domains([name.get_domain_name_nr() for name in self.check_selected_domains()])
+        print(record)
+        self.statistics.add_record_object(record)
+        self.load_last_test_statistics()
         # TODO: Implement the inspector window.
         # TODO: Add the functionality to show the statistics graph.
-        # TODO: Add the function to write and read internal data to file.
+
+    def save_statistics(self):
+        with open('config.statistics', 'wb') as config_stats_file:
+            pickle.dump(self.statistics, config_stats_file)
+
+    def closeEvent(self, event):
+        if self.statistics.added_new_record:
+            self.save_statistics()
+        event.accept()
 
 
 def main():
