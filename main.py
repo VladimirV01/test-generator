@@ -97,8 +97,12 @@ class Statistics:
             self.wrong_answers = 0
             self.accuracy = 0.0
             self.elapsed_time = 0
+            self.selected_domains = []
             if self.right_answers and self.datetime and self.nr_questions:
                 self.finished_record()
+
+        def set_selected_domains(self, domains):
+            self.selected_domains = domains
 
         def set_right_answers(self, right_answers=0):
             self.right_answers = right_answers
@@ -121,7 +125,8 @@ class Statistics:
             print(self.get_record_info())
 
         def get_record_info(self):
-            return f'This test of {self.nr_questions} questions was taken {self.datetime}.\n'\
+            return f'This test of {self.nr_questions} questions was taken {self.datetime}.\n' \
+                   f'The selected domains were {*self.selected_domains,}.\n' \
                    f'There were accumulated {self.right_answers} right answers and {self.wrong_answers} ' \
                    f'wrong answers.\nThe accuracy was {self.accuracy}.\n'\
                    f'The test was completed in {self.elapsed_time}.'
@@ -346,11 +351,11 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
             color = 'red'
         else:
             color = 'green'
-        self.last_test_accuracy.setStyleSheet(f'color:{color}')
+        self.last_test_accuracy.setStyleSheet(f'color:{color}; font-size:20px')
         self.last_test_accuracy.setText(f'{str(record.get_accuracy() * 100)}%')
-        self.last_test_right_answers.setStyleSheet('color:green')
+        self.last_test_right_answers.setStyleSheet('color:green; font-size:20px')
         self.last_test_right_answers.setText(str(record.get_right_answers()))
-        self.last_test_wrong_answers.setStyleSheet('color:red')
+        self.last_test_wrong_answers.setStyleSheet('color:red; font-size:20px')
         self.last_test_wrong_answers.setText(str(record.get_wrong_answers()))
         self.last_test_duration.setText(str(record.get_elapsed_time()).split('.')[0])
 
@@ -396,9 +401,10 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
 
         window = TestDialog()
         record = window.run_test(questions, self.statistics.Record())
+        record.set_selected_domains([name.get_domain_name_nr() for name in self.check_selected_domains()])
+        print(record)
         self.statistics.add_record_object(record)
         self.load_last_test_statistics()
-        # TODO: Show last test results in the main window.
         # TODO: Implement the inspector window.
         # TODO: Add the functionality to show the statistics graph.
 

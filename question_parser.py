@@ -41,8 +41,8 @@ class Parser:
 
 class Domeniu:
     def __init__(self, info, answer_list):
-        self.domain_nr = info[0]
-        self.domain_name = info[1]
+        self.domain_nr = info[0].replace('\n', '')
+        self.domain_name = info[1].replace('\n', '')
         self.info = info[2:]
         self.answer_list = answer_list
 
@@ -89,6 +89,15 @@ class Domeniu:
 
     def get_all_questions(self):
         return self.questions
+
+    def get_domain_name(self):
+        return self.domain_name
+
+    def get_domain_nr(self):
+        return self.domain_nr
+
+    def get_domain_name_nr(self):
+        return self.domain_nr, self.domain_name
 
     class Question:
         def __init__(self, text, var_a, var_b, var_c, var_d, domain_nr, domain_name, answers):
