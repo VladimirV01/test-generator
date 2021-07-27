@@ -5,6 +5,7 @@ from datetime import datetime
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QLabel, QHBoxLayout, QMessageBox
+import matplotlib.pyplot as plt
 
 import main_window
 
@@ -89,6 +90,17 @@ class Statistics:
     def exist_new_records(self):
         return self.added_new_record
 
+    def collect_data_and_draw_graph(self):
+        if len(self.records) > 0:
+            y_values = [self.records[i].get_accuracy() * 100 for i in range(len(self.records))]
+            x_values = [x for x in range(len(self.records))]
+            plt.plot(x_values, y_values)
+            plt.ylabel('Rezultatele testelor (%)')
+            plt.xlabel('Numarul inregistrarii')
+
+            plt.title('Statistica rezolvarii testelor')
+            plt.show()
+
     class Record:
         def __init__(self, right_answers=0, start_time=0, nr_questions=0):
             self.right_answers = right_answers
@@ -97,6 +109,7 @@ class Statistics:
             self.wrong_answers = 0
             self.accuracy = 0.0
             self.elapsed_time = 0
+            self.complete_record = False
             self.selected_domains = []
             if self.right_answers and self.datetime and self.nr_questions:
                 self.finished_record()
@@ -120,6 +133,7 @@ class Statistics:
             self.wrong_answers = self.nr_questions - self.right_answers
             self.accuracy = round(float(self.right_answers / self.nr_questions), 2)
             self.elapsed_time = datetime.now() - self.datetime
+            self.complete_record = True
 
         def print_record(self):
             print(self.get_record_info())
@@ -149,6 +163,9 @@ class Statistics:
         def get_datetime(self):
             return self.datetime
 
+        def get_complete_record_status(self):
+            return self.complete_record
+
         def __repr__(self):
             return self.get_record_info()
 
@@ -169,6 +186,83 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
         self.skip_btn.clicked.connect(self.skip)
         self.next_btn.clicked.connect(self.next)
         self.stop_btn.clicked.connect(self.stop)
+        self.answer.clicked.connect(self.show_result)
+
+        for var in ('a', 'b', 'c', 'd'):
+            textfield = eval(f'self.var_{var}_text')
+            textfield.setContextMenuPolicy(Qt.CustomContextMenu)
+            textfield.mousePressEvent = eval(f'self.var_{var}_click')
+            textfield.mouseDoubleClickEvent = eval(f'self.var_{var}_doubleclick')
+
+    def var_a_click(self, event):
+        if event.button() == Qt.RightButton and not self.answer.isEnabled():
+            self.next()
+        elif event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_a.setChecked(True)
+
+    def var_b_click(self, event):
+        if event.button() == Qt.RightButton and not self.answer.isEnabled():
+            self.next()
+        elif event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_b.setChecked(True)
+
+    def var_c_click(self, event):
+        if event.button() == Qt.RightButton and not self.answer.isEnabled():
+            self.next()
+        elif event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_c.setChecked(True)
+
+    def var_d_click(self, event):
+        if event.button() == Qt.RightButton and not self.answer.isEnabled():
+            self.next()
+        elif event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_d.setChecked(True)
+
+    def var_a_doubleclick(self, event):
+        if event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_a.setChecked(True)
+            self.show_result()
+
+    def var_b_doubleclick(self, event):
+        if event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_b.setChecked(True)
+            self.show_result()
+
+    def var_c_doubleclick(self, event):
+        if event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_c.setChecked(True)
+            self.show_result()
+
+    def var_d_doubleclick(self, event):
+        if event.button() == Qt.LeftButton and self.answer.isEnabled():
+            self.var_d.setChecked(True)
+            self.show_result()
+
+    def show_result(self):
+        if self.check_if_anything_anything_is_selected():
+            answer, _ = self.check_selected_answer()
+            if answer == self.questions[self.question_index].get_answer():
+                textfield = eval(f'self.var_{answer}_text')
+                textfield.setStyleSheet('background-color:green')
+            else:
+                right_textfield = eval(f'self.var_{self.questions[self.question_index].get_answer()}_text')
+                right_textfield.setStyleSheet('background-color:green')
+                wrong_textfield = eval(f'self.var_{answer}_text')
+                wrong_textfield.setStyleSheet('background-color:red')
+
+            if self.question_index in self.skipped_questions:
+                self.skipped_questions.remove(self.question_index)
+                if self.skipped_question_index > 0:
+                    self.skipped_question_index -= 1
+
+            if (self.question_index == len(self.questions) - 1 and len(self.skipped_questions) == 0) or \
+                    (self.finished and len(self.skipped_questions) == 0):
+                self.next_btn.setText('Termina testul')
+
+            self.next_btn.setEnabled(True)
+            self.toggle_answers_enabled(state=False)
+            self.skip_btn.setEnabled(False)
+            self.answer.setEnabled(False)
 
     def stop(self):
         if not self.finished:
@@ -202,8 +296,16 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
             self.reload_skipped_question(value)
 
     def reload_skipped_question(self, value):
-        self.question_index = value - 1
-        self.load_one()
+        if self.finished:
+            self.question_index = value - 1
+            self.load_one()
+        else:
+            message_window = QMessageBox()
+            message_window.setIcon(QMessageBox.Warning)
+            message_window.setWindowTitle('Atentie')
+            message_window.setText('Mai întâi răspundeți la toate întrebările apoi puteți reveni la cele sărite.')
+            message_window.setStandardButtons(QMessageBox.Ok)
+            message_window.exec_()
 
     def skip(self):
         self.labels[self.question_index].setStyleSheet('background-color : gray')
@@ -230,7 +332,7 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
                 return True
             else:
                 self.finished = True
-            return False
+                return self.increment_index()
 
     def check_if_done(self):
         if self.finished and len(self.skipped_questions) == 0:
@@ -240,30 +342,45 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
             if choice == 'Ok':
                 self.close()
 
-    def next(self):
-        if self.var_a.isChecked() or self.var_b.isChecked() or self.var_c.isChecked() or self.var_d.isChecked():
-            if self.var_a.isChecked() and self.questions[self.question_index].get_answer() == 'a':
-                self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.record.increment_right_answers()
-            elif self.var_b.isChecked() and self.questions[self.question_index].get_answer() == 'b':
-                self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.record.increment_right_answers()
-            elif self.var_c.isChecked() and self.questions[self.question_index].get_answer() == 'c':
-                self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.record.increment_right_answers()
-            elif self.var_d.isChecked() and self.questions[self.question_index].get_answer() == 'c':
-                self.labels[self.question_index].setStyleSheet('background-color : green')
-                self.record.increment_right_answers()
+    def set_right_label(self):
+        self.labels[self.question_index].setStyleSheet('background-color : green')
+
+    def set_wrong_label(self):
+        self.labels[self.question_index].setStyleSheet('background-color : red')
+
+    def check_selected_answer(self):
+        for var in ('a', 'b', 'c', 'd'):
+            if eval(f'self.var_{var}.isChecked()'):
+                if self.questions[self.question_index].get_answer() == var:
+                    return var, True
+                break
+        return var, False
+
+    def toggle_answers_enabled(self, state=None):
+        if state is None:
+            if self.var_a.isEnabled():
+                state = False
             else:
-                self.labels[self.question_index].setStyleSheet('background-color : red')
+                state = True
+        for i in ('a', 'b', 'c', 'd'):
+            check = eval(f'self.var_{i}')
+            check.setEnabled(state)
 
-            if self.question_index in self.skipped_questions:
-                self.skipped_questions.remove(self.question_index)
-                if self.skipped_question_index > 0:
-                    self.skipped_question_index -= 1
-            if self.increment_index():
-                self.load_one()
+    def deselect_answers(self):
+        for i in ('a', 'b', 'c', 'd'):
+            check = eval(f'self.var_{i}')
+            check.setAutoExclusive(False)
+            check.setChecked(False)
+            check.setAutoExclusive(True)
 
+    def reset_var_background(self):
+        for var in ('a', 'b', 'c', 'd'):
+            textfield = eval(f'self.var_{var}_text')
+            textfield.setStyleSheet('background-color:white')
+
+    def check_if_anything_anything_is_selected(self):
+        if self.var_a.isChecked() or self.var_b.isChecked() or self.var_c.isChecked() or self.var_d.isChecked():
+            return True
         else:
             message_window = QMessageBox()
             message_window.setIcon(QMessageBox.Warning)
@@ -271,12 +388,32 @@ class TestDialog(QDialog, test_dlg.Ui_Dialog):
             message_window.setText('Nu ati selectat nici o varianta.')
             message_window.setStandardButtons(QMessageBox.Ok)
             message_window.exec_()
+            return False
+
+    def next(self):
+        if self.check_if_anything_anything_is_selected():
+            _, correct = self.check_selected_answer()
+            if correct:
+                self.set_right_label()
+                self.record.increment_right_answers()
+            else:
+                self.set_wrong_label()
+
+            if self.increment_index():
+                self.load_one()
+
         self.check_if_done()
 
     def load_one(self):
         self.question_number.display(self.question_index + 1)
         self.load_question(self.questions[self.question_index])
         self.highlight_current_question_in_navbar()
+        self.next_btn.setEnabled(False)
+        self.deselect_answers()
+        self.toggle_answers_enabled(state=True)
+        self.reset_var_background()
+        self.skip_btn.setEnabled(True)
+        self.answer.setEnabled(True)
 
     def highlight_current_question_in_navbar(self):
         self.labels[self.question_index].setStyleSheet('background-color : lightgray')
@@ -334,6 +471,7 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
         for i in self.domenii:
             i.extract_questions()
 
+        self.show_statistics.clicked.connect(self.statistics.collect_data_and_draw_graph)
         self.generate.clicked.connect(self.show_test_window)
 
     def load_last_test_statistics(self):
@@ -343,11 +481,11 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
             color = 'red'
         else:
             color = 'green'
-        self.last_test_accuracy.setStyleSheet(f'color:{color}; font-size:20px')
+        self.last_test_accuracy.setStyleSheet(f'color:{color}; font-size:25px')
         self.last_test_accuracy.setText(f'{str(record.get_accuracy() * 100)}%')
-        self.last_test_right_answers.setStyleSheet('color:green; font-size:20px')
+        self.last_test_right_answers.setStyleSheet('color:green; font-size:25px')
         self.last_test_right_answers.setText(str(record.get_right_answers()))
-        self.last_test_wrong_answers.setStyleSheet('color:red; font-size:20px')
+        self.last_test_wrong_answers.setStyleSheet('color:red; font-size:25px')
         self.last_test_wrong_answers.setText(str(record.get_wrong_answers()))
         self.last_test_duration.setText(str(record.get_elapsed_time()).split('.')[0])
 
@@ -395,10 +533,9 @@ class Root(QMainWindow, main_window.Ui_MainWindow):
         record = window.run_test(questions, self.statistics.Record())
         record.set_selected_domains([name.get_domain_name_nr() for name in self.check_selected_domains()])
 
-        self.statistics.add_record_object(record)
+        if record.get_complete_record_status():
+            self.statistics.add_record_object(record)
         self.load_last_test_statistics()
-        # TODO: Implement the inspector window.
-        # TODO: Add the functionality to show the statistics graph.
 
     def save_statistics(self):
         with open('config.statistics', 'wb') as config_stats_file:

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1158</width>
-    <height>887</height>
+    <height>863</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -326,7 +326,25 @@
         </font>
        </property>
        <property name="text">
-        <string>Skip</string>
+        <string>Sari peste</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="answer">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>13</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Răspunde</string>
        </property>
       </widget>
      </item>
@@ -344,7 +362,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Next</string>
+        <string>Următoarea întrebare</string>
        </property>
       </widget>
      </item>
@@ -362,7 +380,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Stop</string>
+        <string>Opriți testul</string>
        </property>
       </widget>
      </item>
