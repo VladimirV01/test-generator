@@ -11,6 +11,7 @@ class Parser:
     def set_path(self, path, answers_path):
         self.path = path
         self.answers_path = answers_path
+        self.answer_list = []
 
     def load_info(self):
         with open(self.path, 'r') as file:
